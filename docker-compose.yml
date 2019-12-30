@@ -1,0 +1,40 @@
+version: "2"
+services:
+  redis:
+    image: redis
+    restart: always
+    expose:
+      - 6379
+    volumes:
+      - ./runtime/redis/data:/data
+  mongo:
+    image: bitnami/mongodb
+    restart: always
+    privileged: true
+    user: root
+    expose:
+      - 27017
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./runtime/mongo/data:/bitnami
+  php_nginx:
+    image: dreamplay/php_nginx
+    restart: always
+    privileged: true
+    command: /usr/sbin/init
+    depends_on:
+      - redis
+      - mongo
+    ports:
+      - 8888:80
+    #      - 9002:9001
+    volumes:
+      - ./config/rc.local:/etc/rc.d/rc.local
+      - ./runtime/nginx/wwwlogs:/home/wwwlogs
+      - ./code/api/common_log:/home/wwwroot/api/common_log
+      - ./config/nginx/nginx.conf:/usr/local/nginx/conf/nginx.conf
+      - ./config/nginx/vhost:/usr/local/nginx/conf/vhost
+      - ./config/php/php-fpm.conf:/usr/local/php/etc/php-fpm.conf
+      - ./config/php/php.ini:/usr/local/php/etc/php.ini
+      - ./config/supervisor/supervisord.d:/etc/supervisord.d
+      - ./config/supervisor/supervisord.conf:/etc/supervisord.conf

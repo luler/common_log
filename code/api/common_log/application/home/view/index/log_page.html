@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>通用日志系统</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <script src="/layui/layui.js"></script>
+    <script src="/js/jquery.min.js"></script>
+</head>
+<body>
+
+<div style="padding: 0 10px;">
+    <div>
+        <form onsubmit="return false;" style="margin-top: 50px;" class="layui-form" action="">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">项目代码</label>
+                    <div class="layui-input-inline">
+                        <select onchange="changeList()" name="project_name">
+                            <!--                        <option value="">请选择问题</option>-->
+                        </select>
+                        <script>
+                            $.ajax({
+                                type: "GET",
+                                url: "/api/getProjectNameList",
+                                headers: {
+                                    Authorization: localStorage.getItem('access_token')
+                                },
+                                complete: function (res) {
+                                    if (res.responseJSON.code == 401) {
+                                        location.href = '/getAccessTokenPage';
+                                        return;
+                                    }
+                                    res.responseJSON.info.map(function (value) {
+                                        $('select[name="project_name"]').append('<option value="' + value + '">' + value + '</option>');
+                                        layui.use('form', function () {
+                                            var form = layui.form;
+                                            form.on('select', function (data) {
+                                                changeList();
+                                            });
+                                            form.render();
+                                        });
+                                    });
+                                    changeList();
+                                }
+                            });
+                        </script>
+                    </div>
+                </div>
+
+                <div class="layui-inline">
+                    <label class="layui-form-label">信息等级</label>
+                    <div class="layui-input-inline">
+                        <select onselect="changeList()" name="level">
+                            <option value="" selected>全部</option>
+                            <option value="error">error</option>
+                            <option value="warning">warning</option>
+                            <option value="info">info</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">搜索选择框</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="search" placeholder="请输入关键字" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">时间</label>
+                    <div class="layui-input-inline">
+                        <input type="text" class="layui-input" id="date" placeholder=" - ">
+                        <script>
+                            layui.use('laydate', function () {
+                                var laydate = layui.laydate;
+                                laydate.render({
+                                    elem: '#date'
+                                    , type: 'datetime'
+                                    , range: true
+                                });
+                            });
+                        </script>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <div class="layui-input-inline">
+                        <button onclick="changeList();" class="layui-btn">搜索</button>
+                        <button onclick="deleteLog();" class="layui-btn layui-btn-danger">删除</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <table id="demo" lay-filter="test"></table>
+</div>
+
+<script>
+    function deleteLog() {
+        var where = {
+            project_name: $('select[name="project_name"]').val()
+        };
+        var date = $("#date").val().split(' - ');
+        where.search = $('input[name="search"]').val();
+        where.level = $('select[name="level"]').val();
+        where.start_time = date[0];
+        where.end_time = date[1];
+        layui.use(['layer'], function () {
+            layer = layui.layer;//弹层
+            layer.confirm('确定要删除日志吗？', {btn: ['确定', '取消']}, function () {
+                $.ajax({
+                    type: "POST",
+                    url: "/api/deleteLog",
+                    data: where,
+                    headers: {
+                        Authorization: localStorage.getItem('access_token')
+                    },
+                    complete: function (res) {
+                        if (res.responseJSON.code == 401) {
+                            location.href = '/getAccessTokenPage';
+                            return;
+                        }
+                        layer.msg(res.responseJSON.message);
+                        changeList();
+                    }
+                })
+            });
+        });
+
+
+    }
+
+    function changeList() {
+        var where = {
+            project_name: $('select[name="project_name"]').val()
+        };
+        var date = $("#date").val().split(' - ');
+        where.search = $('input[name="search"]').val();
+        where.level = $('select[name="level"]').val();
+        where.start_time = date[0];
+        where.end_time = date[1];
+
+        layui.use('table', function () {
+            var table = layui.table;
+            //第一个实例
+            table.render({
+                elem: '#demo',
+                height: 800,
+                url: '/api/getLogList', //数据接口
+                where: where,
+                request: {
+                    pageName: 'page' //页码的参数名称，默认：page
+                    , limitName: 'page_rows' //每页数据量的参数名，默认：limit
+                },
+                headers: {
+                    Authorization: localStorage.getItem('access_token')
+                },
+                parseData: function (res) { //res 即为原始返回的数据
+                    return {
+                        "code": res.code, //解析接口状态
+                        "msg": res.message, //解析提示文本
+                        "count": res.info.total, //解析数据长度
+                        "data": res.info.list //解析数据列表
+                    };
+                },
+                response: {
+                    // statusName: 'code' //规定数据状态的字段名称，默认：code
+                    statusCode: 200 //规定成功的状态码，默认：0
+                    // ,msgName: 'message' //规定状态信息的字段名称，默认：msg
+                    // ,countName: 'total' //规定数据总数的字段名称，默认：count
+                    // ,dataName: 'rows' //规定数据列表的字段名称，默认：data
+                },
+                limit: 18,
+                limits: [18, 36, 54],
+                page: true, //开启分页
+                cols:
+                    [[ //表头
+                        {field: 'project_name', title: '项目代码', width: 140}
+                        , {field: 'level', title: '信息等级', templet: '#level_type', width: 80}
+                        , {field: 'ip', title: 'ip', width: 120}
+                        , {field: 'message', title: '日志信息',}
+                        , {field: 'other', title: '其他信息',}
+                        , {field: 'create_time', title: '时间', width: 180}
+                    ]]
+            })
+            ;
+
+        });
+    }
+
+</script>
+<script type="text/html" id="level_type">
+    {{# if(d.level == 'error'){ }}
+    <span class="layui-badge layui-bg-red">error</span>
+    {{# } else if(d.level =='warning') { }}
+    <span class="layui-badge layui-bg-orange">warning</span>
+    {{# } else if(d.level =='info') { }}
+    <span class="layui-badge layui-bg-blue">info</span> {{# } }}
+</script>
+<!-- 你的HTML代码 -->
+</body>
+</html>

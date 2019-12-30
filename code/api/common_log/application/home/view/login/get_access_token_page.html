@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>通用日志系统-登录</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <script src="/layui/layui.js"></script>
+</head>
+<body>
+
+<!-- 你的HTML代码 -->
+<div class="layui-container">
+    <div class="layui-row">
+        <div class="layui-col-md-offset4 layui-col-md4">
+            <form style="margin-top: 40%" class="layui-form layui-form-pane" action="">
+                <h1 style="text-align: center;">通用日志系统</h1>
+                <hr style="margin-bottom: 10%;">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">appid:</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="appid" required lay-verify="required" placeholder="请输入appid"
+                               autocomplete="off"
+                               class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">appsecret:</label>
+                    <div class="layui-input-block">
+                        <input type="password" name="appsecret" required lay-verify="required"
+                               placeholder="请输入appsecret"
+                               autocomplete="off"
+                               class="layui-input">
+                    </div>
+                    <!--                    <div class="layui-form-mid layui-word-aux">辅助文字</div>-->
+                </div>
+
+
+                <div class="layui-form-item">
+                    <!--                    <div class="layui-input-block">-->
+                    <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="formDemo">登录</button>
+                    <!--                        <button type="reset" class="layui-btn layui-btn-primary">重置</button>-->
+                    <!--                    </div>-->
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    //Demo
+    layui.use(['jquery', 'form'], function () {
+        var form = layui.form;
+        var $ = layui.$;
+
+        //监听提交
+        form.on('submit(formDemo)', function (data) {
+            $.ajax({
+                type: 'GET',
+                url: '/api/getAccessToken',
+                data: data.field,
+                complete: function (res) {
+                    layer.msg(res.responseJSON.message, {icon: 2})
+                    if (res.responseJSON.code == 200) {
+                        localStorage.setItem('access_token', res.responseJSON.info.access_token);
+                        location.href = '/'
+                    }
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+</html>
